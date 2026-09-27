@@ -1,6 +1,7 @@
+import { useEffect, useState } from 'react';
 import { ArrowRight, ChevronDown, GraduationCap, BriefcaseBusiness, Palette, Gamepad2, Laptop, Monitor, Printer, Mouse, MapPin, Search, ShieldCheck, Truck, Phone, Mail, MessageCircle } from 'lucide-react';
 import { categories, cities, company } from './data/catalog.js';
-import { deliveryFor } from './lib/domain.js';
+import { DEFAULT_FILTERS, deliveryFor } from './lib/domain.js';
 import { useApp } from './state.jsx';
 
 export function Icon({ name, size = 20, ...props }) {
@@ -27,7 +28,11 @@ export function CitySelect({ id = 'global-city', compact = false }) {
 }
 
 export function Header() {
-  return <><div className="service-strip"><div className="site-container"><span><ShieldCheck size={13} /> Tecnología con asesoría personalizada</span><span className="strip-end">Prototipo UX <span className="strip-dot" /> Sin pagos en línea</span></div></div><header className="main-header"><div className="site-container header-inner"><Link to="/" className="brand" aria-label="Gold Partner, ir al inicio"><img src={company.logo} alt="Gold Partner" width="230" height="71" /></Link><CitySelect /></div></header></>;
+  const { session, update, navigate } = useApp();
+  const [search, setSearch] = useState(session.query);
+  useEffect(() => setSearch(session.query), [session.query]);
+  const submitSearch = event => { event.preventDefault(); update({ query: search.trim(), filters: { ...DEFAULT_FILTERS, ram: [], storage: [], os: [] } }); navigate('/catalogo/todos'); };
+  return <><div className="service-strip"><div className="site-container"><span><ShieldCheck size={13} /> Tecnología con asesoría personalizada</span><span className="strip-end">Prototipo UX <span className="strip-dot" /> Sin pagos en línea</span></div></div><header className="main-header"><div className="site-container header-inner"><Link to="/" className="brand" aria-label="Gold Partner, ir al inicio"><img src={company.logo} alt="Gold Partner" width="230" height="71" /></Link><form className="search-form" role="search" onSubmit={submitSearch}><Search size={19} aria-hidden="true" /><input type="search" aria-label="Buscar producto" placeholder="¿Qué tecnología estás buscando?" value={search} onChange={e => setSearch(e.target.value)} /><button type="submit" aria-label="Buscar"><ArrowRight size={20} /></button></form><CitySelect /></div></header></>;
 }
 
 export function Breadcrumb({ category, product }) {

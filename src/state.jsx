@@ -1,9 +1,10 @@
 import { createContext, useContext, useEffect, useState } from 'react';
+import { DEFAULT_FILTERS } from './lib/domain.js';
 
 const AppContext = createContext(null);
 
 export function AppProvider({ children }) {
-  const [session, setSession] = useState({ city: 'Lima' });
+  const [session, setSession] = useState({ city: 'Lima', filters: { ...DEFAULT_FILTERS, ram: [], storage: [], os: [] }, query: '', sort: 'recommended' });
   const [route, setRoute] = useState(window.location.hash.slice(1) || '/');
   useEffect(() => {
     const handle = () => setRoute(window.location.hash.slice(1) || '/');
