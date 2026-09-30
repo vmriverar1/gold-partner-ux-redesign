@@ -76,7 +76,7 @@ export function CatalogPage({ category }) {
   })}</div></details>;
 
   if (!categories.some(c => c.id === category) && category !== 'todos') return <div className="site-container"><EmptyState title="No encontramos esta categoría" description="Explora las categorías disponibles." action="Ver categorías" to="/" /></div>;
-  return <div className="site-container catalog-page page-enter"><Breadcrumb category={category} /><div className="catalog-heading"><div><div className="eyebrow">CATÁLOGO GOLD PARTNER</div><h1>{categoryName(category)}</h1><p>Encuentra el equipo que encaja contigo.</p></div><Link to="/" className="back-link">Cambiar categoría <ArrowRight size={16} /></Link></div>
+  return <div className="site-container catalog-page page-enter"><Breadcrumb category={category} /><div className="catalog-heading"><div><div className="eyebrow">CATÁLOGO GOLD PARTNER</div><h1>{categoryName(category)}</h1><p>Encuentra el equipo que encaja contigo. Compara antes de decidir.</p></div><Link to="/" className="back-link">Cambiar categoría <ArrowRight size={16} /></Link></div>
     <p className="catalog-demo-note">Catálogo de demostración · Stock y entrega referenciales. El asesor confirma disponibilidad.</p>
     <div className="catalog-layout">
       {mobileOpen && <button className="filter-backdrop" onClick={closeFilters} aria-label="Cerrar panel de filtros" />}

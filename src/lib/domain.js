@@ -32,3 +32,27 @@ export function deliveryFor(city) {
     ? { label: '2–4 días hábiles', detail: 'Plazo referencial. El asesor confirma la fecha y las condiciones de entrega.' }
     : { label: 'Entrega por confirmar', detail: 'El asesor confirma el transporte, costo y plazo para tu ciudad.' };
 }
+
+export function calculateCosts(items, products, city) {
+  let productCents = 0;
+  let units = 0;
+  for (const item of items) {
+    const product = products.find(candidate => candidate.id === item.id);
+    const qty = Number.isFinite(Number(item.qty)) ? Math.max(0, Math.floor(Number(item.qty))) : 0;
+    if (!product || !qty || !Number.isFinite(Number(product.price))) continue;
+    productCents += Math.round(Number(product.price) * 100) * qty;
+    units += qty;
+  }
+  // The catalogue price includes IGV. The two rows only explain that price.
+  const baseCents = Math.round(productCents / 1.18);
+  const shipping = units === 0 ? 0 : normalize(city) === 'lima' ? 25 : null;
+  return { base: baseCents / 100, tax: (productCents - baseCents) / 100, shipping, total: (productCents + (shipping ?? 0) * 100) / 100, quantity: units, productsTotal: productCents / 100 };
+}
+
+export function toggleComparison(ids, product, products) {
+  if (ids.includes(product.id)) return { ids: ids.filter(id => id !== product.id), error: '' };
+  if (ids.length >= 3) return { ids: [...ids], error: 'Puedes comparar hasta 3 productos. Quita uno para agregar otro.' };
+  const existing = products.find(candidate => candidate.id === ids[0]);
+  if (existing && normalize(existing.category) !== normalize(product.category)) return { ids: [...ids], error: 'Compara productos de la misma categoría para evaluar características equivalentes.' };
+  return { ids: [...ids, product.id], error: '' };
+}

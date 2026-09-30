@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, ChevronDown, GraduationCap, BriefcaseBusiness, Palette, Gamepad2, Laptop, Monitor, Printer, Mouse, MapPin, Search, ShieldCheck, Truck, Phone, Mail, MessageCircle } from 'lucide-react';
-import { categories, cities, company } from './data/catalog.js';
-import { DEFAULT_FILTERS, deliveryFor } from './lib/domain.js';
+import { ArrowLeft, ArrowRight, CheckCircle2, ChevronDown, GraduationCap, BriefcaseBusiness, Palette, Gamepad2, Laptop, Monitor, Printer, Mouse, MapPin, Search, ShieldCheck, Truck, Phone, Mail, MessageCircle, Layers3, X } from 'lucide-react';
+import { categories, cities, company, products } from './data/catalog.js';
+import { DEFAULT_FILTERS, deliveryFor, calculateCosts } from './lib/domain.js';
 import { useApp } from './state.jsx';
 
 export function Icon({ name, size = 20, ...props }) {
@@ -46,7 +46,38 @@ export function Footer() {
 export function ProductCard({ product: p, index = 0 }) {
   const { destinationCity } = useApp();
   const delivery = deliveryFor(destinationCity);
-  return <article className="product-card" data-testid="product-card" style={{ '--card-index': index }}><div className="product-photo"><span className="product-type">{categoryName(p.category)}</span><img src={p.image} alt={p.name} width="400" height="400" loading={index > 1 ? 'lazy' : 'eager'} /></div><div className="product-card-body"><div className="product-brand">{p.brand}</div><h2>{p.name}</h2><div className="product-hardware">{p.processor && <p className="product-processor">{p.processor}</p>}<p className="product-specs">{specs(p)}</p></div><div className="product-price">{money(p.price)}<small>IGV incluido</small></div><div className={`stock-line ${p.stock <= 3 ? 'low-stock' : ''}`}><span className="status-dot" />{p.stock <= 3 ? 'Últimas unidades' : 'Disponible'}</div><p className="delivery-line"><Truck size={15} /> {delivery.label}<span className="sr-only">, referencial</span></p></div></article>;
+  return <article className="product-card" data-testid="product-card" style={{ '--card-index': index }}><Link to={`/producto/${p.id}`} className="product-photo" aria-label={`Ver ficha de ${p.name}`}><span className="product-type">{categoryName(p.category)}</span><img src={p.image} alt={p.name} width="400" height="400" loading={index > 1 ? 'lazy' : 'eager'} /></Link><div className="product-card-body"><div className="product-brand">{p.brand}</div><h2><Link to={`/producto/${p.id}`}>{p.name}</Link></h2><div className="product-hardware">{p.processor && <p className="product-processor">{p.processor}</p>}<p className="product-specs">{specs(p)}</p></div><div className="product-price">{money(p.price)}<small>IGV incluido</small></div><div className={`stock-line ${p.stock <= 3 ? 'low-stock' : ''}`}><span className="status-dot" />{p.stock <= 3 ? 'Últimas unidades' : 'Disponible'}</div><p className="delivery-line"><Truck size={15} /> {delivery.label}<span className="sr-only">, referencial</span></p><div className="card-bottom"><CompareControl product={p} /><div className="product-actions"><Link to={`/producto/${p.id}`} className="detail-link">Ver ficha <ArrowRight size={15} /></Link></div></div></div></article>;
+}
+
+export function CompareControl({ product }) {
+  const { session, compare } = useApp();
+  return <label className="compare-check"><input type="checkbox" className="form-check-input" aria-label={`Comparar ${product.name}`} checked={session.compare.includes(product.id)} onChange={() => compare(product)} /><span>Comparar</span></label>;
+}
+
+export function CompareTray() {
+  const { session, update, navigate, route } = useApp();
+  if (!session.compare.length || route === '/comparar') return null;
+  return <aside className="compare-tray" aria-label="Productos seleccionados para comparar"><div className="site-container tray-inner"><div className="tray-heading"><Layers3 size={22} /><div><b>Compara y elige</b><small>{session.compare.length} de 3 seleccionados</small></div></div><div className="tray-products">{session.compare.map(id => {
+    const p = products.find(product => product.id === id);
+    return <div className="tray-product" key={id}><img src={p.image} alt="" /><span>{p.name}</span><button aria-label={`Quitar ${p.name} de comparación`} onClick={() => update({ compare: session.compare.filter(value => value !== id) })}><X size={15} /></button></div>;
+  })}</div><button className="btn btn-dark" disabled={session.compare.length < 2} onClick={() => navigate('/comparar')}>Ver comparación <ArrowRight size={17} /></button></div></aside>;
+}
+
+export function CostSummary({ items, city, title = 'Resumen estimado', compact = false, cost }) {
+  const { destinationCity } = useApp();
+  const destination = city || destinationCity;
+  const costs = cost || calculateCosts(items, products, destination);
+  return <section className={`cost-summary ${compact ? 'compact' : ''}`} aria-label={title}><h3>{title}</h3><dl><div><dt>Productos sin IGV <small>({costs.quantity} {costs.quantity === 1 ? 'unidad' : 'unidades'})</small></dt><dd>{money(costs.base)}</dd></div><div><dt>IGV incluido (18%)</dt><dd>{money(costs.tax)}</dd></div><div><dt>Envío estimado a {destination}</dt><dd>{costs.shipping === null ? 'Por confirmar' : money(costs.shipping)}</dd></div><div className="cost-total"><dt>{costs.shipping === null ? 'Subtotal conocido' : 'Total estimado'}</dt><dd>{money(costs.total)}</dd></div></dl><p className="estimate-note">{costs.shipping === null ? 'Falta confirmar el envío. ' : ''}Montos referenciales. El asesor confirma la cotización.</p></section>;
+}
+
+export function Toast() {
+  const { toast, setToast } = useApp();
+  if (!toast) return null;
+  return <div className={`feedback-toast ${toast.kind}`} role="status" aria-live="polite"><CheckCircle2 size={21} /><div>{toast.message}</div><button onClick={() => setToast(null)} aria-label="Cerrar aviso"><X size={17} /></button></div>;
+}
+
+export function BackLink({ to, children = 'Volver al catálogo' }) {
+  return <Link to={to} className="back-link"><ArrowLeft size={16} />{children}</Link>;
 }
 
 export function EmptyState({ title, description, action, onAction, to }) {
