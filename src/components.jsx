@@ -53,9 +53,10 @@ export function Breadcrumb({ category, product }) {
 }
 
 export function Footer() {
+  const { help } = useApp();
   return <footer className="footer"><div className="site-container">
     <div className="footer-top"><div className="footer-brand"><span>GOLD<span>PARTNER</span></span><p>Tecnología para lo que viene.</p></div><div><h3>Conversemos</h3><a href={`https://wa.me/${company.whatsapp}`} target="_blank" rel="noreferrer"><MessageCircle size={16} /> +51 963 718 705</a><a href={`tel:+5117118255`}><Phone size={16} /> {company.phone}</a><a href={`mailto:${company.email}`}><Mail size={16} /> {company.email}</a></div><div className="footer-address"><h3>Punto de recojo</h3><p>{company.address}</p><p className="muted-light">Recojo coordinado con el asesor. No es tienda de venta.</p></div></div>
-    <div className="footer-bottom"><span>© 2026 {company.name} · Prototipo académico de rediseño</span></div>
+    <div className="footer-bottom"><span>© 2026 {company.name} · Prototipo académico de rediseño</span><button className="text-button light" onClick={help}>¿Cómo funciona la solicitud?</button></div>
   </div></footer>;
 }
 

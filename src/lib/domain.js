@@ -59,6 +59,61 @@ export function deliveryFor(city) {
     : { label: 'Entrega por confirmar', detail: 'El asesor confirma el transporte, costo y plazo para tu ciudad.' };
 }
 
+export function validateContact(contact = {}) {
+  const errors = {};
+  const preference = normalize(contact.preference);
+  if (!['whatsapp', 'llamada', 'correo', 'email'].includes(preference)) errors.preference = 'Elige cómo prefieres que te contacten.';
+  if (String(contact.name ?? '').trim().split(/\s+/).filter(Boolean).length < 2) errors.name = 'Ingresa tu nombre y apellido.';
+  const phone = String(contact.phone ?? '').replace(/[\s()-]/g, '').replace(/^\+?51/, '');
+  if (!/^9\d{8}$/.test(phone)) errors.phone = 'Ingresa un celular peruano de 9 dígitos que empiece con 9.';
+  const email = String(contact.email ?? '').trim();
+  if (['correo', 'email'].includes(preference) && !email) errors.email = 'Ingresa el correo donde prefieres recibir la respuesta.';
+  else if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = 'Ingresa un correo electrónico válido.';
+  if (!String(contact.city ?? '').trim()) errors.city = 'Selecciona la ciudad de entrega.';
+  return errors;
+}
+
+export function requestMessage(request, products) {
+  const contact = request.contact ?? {};
+  const city = request.city || contact.city || 'Por confirmar';
+  const costs = request.costs ?? calculateCosts(request.items ?? [], products, city);
+  const lines = [
+    'Hola, Gold Partner. Quiero solicitar una cotización.',
+    `Referencia: ${request.reference ?? 'Sin referencia'}`,
+    '',
+    'PRODUCTOS',
+  ];
+  for (const item of request.items ?? []) {
+    const product = products.find(candidate => candidate.id === item.id);
+    if (!product) continue;
+    lines.push(`${item.qty} × ${product.name} | SKU: ${product.sku ?? 'Sin dato'} | ${money(product.price)} por unidad (IGV incluido)`);
+    if (String(item.note ?? '').trim()) lines.push(`Nota del producto: ${String(item.note).trim()}`);
+  }
+  if (String(request.note ?? '').trim()) lines.push('', `Nota para el asesor: ${String(request.note).trim()}`);
+  lines.push(
+    '',
+    'COSTO REFERENCIAL',
+    `Productos (IGV incluido): ${money(costs.productsTotal)}`,
+    `Base sin IGV: ${money(costs.base)}`,
+    `IGV incluido (18%): ${money(costs.tax)}`,
+    `Envío a ${city}: ${costs.shipping === null ? 'Por confirmar' : money(costs.shipping)}`,
+    `${costs.shipping === null ? 'Subtotal conocido' : 'Total estimado'}: ${money(costs.total)}`,
+    'Stock, importes y entrega sujetos a confirmación del asesor.',
+    '',
+    'MIS DATOS',
+    `Nombre: ${contact.name ?? ''}`,
+    `Teléfono / WhatsApp: ${contact.phone ?? ''}`,
+    `Correo: ${contact.email || 'No indicado'}`,
+    `Ciudad de entrega: ${city}`,
+    `Contacto preferido: ${contact.preference || 'WhatsApp'}`,
+  );
+  return lines.join('\n');
+}
+
+export function whatsappUrl(request, products) {
+  return `https://wa.me/51963718705?text=${encodeURIComponent(requestMessage(request, products))}`;
+}
+
 export function updateQuantity(items, id, delta, products) {
   const product = products.find(candidate => candidate.id === id);
   if (!product || product.stock < 1) return items.map(item => ({ ...item }));
