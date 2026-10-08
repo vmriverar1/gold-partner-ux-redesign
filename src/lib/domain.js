@@ -10,6 +10,7 @@ export function validateBudget(min, max) {
   if (!Number.isFinite(lower) || !Number.isFinite(upper)) return 'Ingresa un presupuesto válido.';
   if (lower < 0 || upper < 0) return 'El presupuesto no puede ser negativo.';
   if (lower > upper) return 'El monto mínimo no puede superar al máximo.';
+  if (upper > DEFAULT_FILTERS.max) return 'El presupuesto no puede superar S/ 10 000.';
   return '';
 }
 

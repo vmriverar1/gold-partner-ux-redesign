@@ -120,9 +120,15 @@ svg { flex-shrink:0; }
 .budget-inputs label { display:block; border:1px solid var(--line); border-radius:4px; padding:7px 9px; }
 .budget-inputs label span { font-size:9px; color:var(--muted); display:block; }
 .budget-inputs input { border:0; padding:3px 0 0; border-radius:0; height:auto; min-height:0; font-size:13px; background:none; width:100%; color:var(--ink); }
-.budget-sliders { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin:16px 0; }
-.budget-sliders input { width:100%; height:3px; appearance:none; background:#d9ddce; cursor:pointer; }
-.budget-sliders input::-webkit-slider-thumb { appearance:none; width:13px; height:13px; border-radius:50%; background:var(--gold); border:2px solid var(--ink); }
+.price-range { position:relative; display:flex; align-items:center; width:100%; height:44px; margin:9px 0 12px; touch-action:none; user-select:none; cursor:pointer; }
+.price-range-track { position:relative; height:6px; flex:1; border-radius:999px; background:#d9ddce; }
+.price-range-selection { position:absolute; height:100%; border-radius:999px; background:var(--gold); }
+.price-range-thumb { position:relative; display:flex; align-items:center; justify-content:center; width:44px; height:44px; border-radius:50%; cursor:grab; outline:none; }
+.price-range-thumb::before { content:''; width:24px; height:24px; border:2px solid var(--ink); border-radius:50%; background:var(--gold); box-shadow:0 2px 5px #24252226; transition:background .15s,box-shadow .15s; }
+.price-range-thumb::after { content:''; position:absolute; width:5px; height:8px; border-left:1px solid var(--ink); border-right:1px solid var(--ink); }
+.price-range-thumb:hover::before { background:#ffe166; box-shadow:0 2px 8px #24252240; }
+.price-range-thumb:active { cursor:grabbing; }
+.price-range-thumb:focus-visible { z-index:1; }
 .budget-presets { display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; margin-bottom:24px; }
 .budget-presets button { border:1px solid var(--line); border-radius:3px; padding:7px 2px; font-size:9px; white-space:nowrap; background:white; }
 .budget-presets button:hover,.budget-presets button.selected { border-color:#c4a535; background:var(--gold-light); }

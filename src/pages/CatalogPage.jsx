@@ -4,6 +4,7 @@ import { categories, products, uses } from '../data/catalog.js';
 import { DEFAULT_FILTERS, filterProducts, validateBudget } from '../lib/domain.js';
 import { useApp } from '../state.jsx';
 import { Breadcrumb, EmptyState, Link, ProductCard, categoryName } from '../components.jsx';
+import { PriceRange } from '../PriceRange.jsx';
 
 const copyFilters = (filters) => ({ ...filters, ram: [...filters.ram], storage: [...filters.storage], os: [...filters.os] });
 const normalizeOption = value => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
@@ -28,7 +29,7 @@ export function CatalogPage({ category }) {
     const handleKeys = (e) => {
       if (e.key === 'Escape') { e.preventDefault(); setMobileOpen(false); }
       if (e.key !== 'Tab') return;
-      const focusable = [...panel.current.querySelectorAll('button, input, select, summary, a[href]')].filter(el => !el.disabled && el.getClientRects().length);
+      const focusable = [...panel.current.querySelectorAll('button, input, select, summary, a[href], [role="slider"]')].filter(el => !el.disabled && el.getClientRects().length);
       const first = focusable[0], last = focusable.at(-1);
       if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus(); }
       else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
@@ -82,7 +83,7 @@ export function CatalogPage({ category }) {
       {mobileOpen && <button className="filter-backdrop" onClick={closeFilters} aria-label="Cerrar panel de filtros" />}
       <aside ref={panel} className={`filter-panel ${mobileOpen ? 'is-open' : ''}`} role={mobileOpen ? 'dialog' : undefined} aria-modal={mobileOpen ? 'true' : undefined} aria-label="Filtros de productos"><div className="filter-panel-heading"><h2><SlidersHorizontal size={20} /> Filtros</h2><button className="filter-close icon-button" aria-label="Cerrar filtros" onClick={closeFilters}><X size={20} /></button></div><form onSubmit={event => { event.preventDefault(); applyBudget(budget); }} onKeyDown={event => { if (event.key === 'Enter' && event.target.type === 'number') { event.preventDefault(); applyBudget(budget); } }}>
         <section className="budget-filter"><h3>Presupuesto</h3><div className="budget-inputs"><label><span>Desde S/</span><input className="form-control" aria-label="Presupuesto mínimo" aria-invalid={Boolean(budgetError)} aria-describedby={budgetError ? 'budget-error' : undefined} type="number" min="0" max="10000" step="1" value={budget.min} onChange={e => editBudget('min', e.target.value)} onBlur={() => applyBudget(budget)} /></label><label><span>Hasta S/</span><input className="form-control" aria-label="Presupuesto máximo" aria-invalid={Boolean(budgetError)} aria-describedby={budgetError ? 'budget-error' : undefined} type="number" min="0" max="10000" step="1" value={budget.max} onChange={e => editBudget('max', e.target.value)} onBlur={() => applyBudget(budget)} /></label></div>
-          <div className="budget-sliders"><input type="range" aria-label="Ajustar presupuesto mínimo" min="0" max="10000" step="100" value={session.filters.min} onChange={e => applyBudget({ min: Math.min(Number(e.target.value), session.filters.max), max: session.filters.max })} /><input type="range" aria-label="Ajustar presupuesto máximo" min="0" max="10000" step="100" value={session.filters.max} onChange={e => applyBudget({ min: session.filters.min, max: Math.max(Number(e.target.value), session.filters.min) })} /></div>
+          <PriceRange min={Number(session.filters.min)} max={Number(session.filters.max)} onChange={applyBudget} />
           <div className="budget-presets">{[[0,1500,'Hasta 1 500'],[1500,3000,'1 500–3 000'],[3000,10000,'3 000 +']].map(([min,max,label]) => <button type="button" key={label} className={Number(session.filters.min) === min && Number(session.filters.max) === max ? 'selected' : ''} onClick={() => applyBudget({ min, max })}>{label}</button>)}</div>{budgetError && <p id="budget-error" className="field-error" role="alert">{budgetError}</p>}
         </section>
         {supportsTech && <>{group('ram', 'Memoria RAM', numericOptions('ram').map(value => ({ value, label: `${value} GB` })))}{group('storage', 'Almacenamiento', numericOptions('storage').map(value => ({ value, label: storageLabel(value) })))}{group('os', 'Sistema operativo', osOptions)}</>}
