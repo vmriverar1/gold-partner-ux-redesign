@@ -79,9 +79,11 @@ export function ProductCard({ product: p, index = 0 }) {
   </article>;
 }
 
+export const shouldShowCompareTray = (route, count) => count > 0 && !['/comparar', '/como-funciona'].includes(route) && !route.startsWith('/solicitud');
+
 export function CompareTray() {
   const { session, update, navigate, route } = useApp();
-  if (!session.compare.length || ['/comparar', '/como-funciona'].includes(route) || route.startsWith('/solicitud')) return null;
+  if (!shouldShowCompareTray(route, session.compare.length)) return null;
   return <aside className="compare-tray" aria-label="Productos seleccionados para comparar"><div className="site-container tray-inner"><div className="tray-heading"><Layers3 size={22} /><div><b>Compara y elige</b><small>{session.compare.length} de 3 seleccionados</small></div></div><div className="tray-products">{session.compare.map(id => {
     const p = products.find(product => product.id === id);
     return <div className="tray-product" key={id}><img src={p.image} alt="" /><span>{p.name}</span><button aria-label={`Quitar ${p.name} de comparación`} onClick={() => update({ compare: session.compare.filter(value => value !== id) })}><X size={15} /></button></div>;
