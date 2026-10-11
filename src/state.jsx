@@ -6,7 +6,7 @@ const STORAGE_KEY = 'gold-partner-ux-v1';
 const AppContext = createContext(null);
 const emptyContact = { name: '', phone: '', email: '', preference: 'WhatsApp' };
 const freshFilters = () => ({ ...DEFAULT_FILTERS, ram: [], storage: [], os: [] });
-const defaults = () => ({ items: [], compare: [], city: 'Lima', otherCity: '', filters: freshFilters(), query: '', sort: 'recommended', note: '', contact: { ...emptyContact }, lastRequest: null });
+const defaults = () => ({ items: [], compare: [], city: 'Lima', otherCity: '', filters: freshFilters(), query: '', sort: 'recommended', note: '', contact: { ...emptyContact }, lastRequest: null, history: [], draftDirty: true });
 const isRecord = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 export const isValidOtherCity = value => typeof value === 'string' && value.trim().length <= 80 && /^[\p{L}\p{M}\s.'’()-]+$/u.test(value.trim()) && (value.match(/\p{L}/gu)?.length ?? 0) >= 2;
 
@@ -44,10 +44,18 @@ function sanitizeRequest(raw, discard) {
   if (Object.keys(validateContact(contact)).length) { discard(); return null; }
   const costs = calculateCosts(items, products, city);
   if (Object.keys(costs).some(field => costs[field] !== raw.costs[field])) discard();
+  const validStart = typeof raw.whatsappStartedAt === 'string'
+    && Number.isFinite(Date.parse(raw.whatsappStartedAt))
+    && new Date(raw.whatsappStartedAt).toISOString() === raw.whatsappStartedAt;
+  const status = raw.status === 'whatsapp_started' && validStart ? 'whatsapp_started' : 'prepared';
+  if ((raw.status !== undefined && !['prepared', 'whatsapp_started'].includes(raw.status))
+    || (raw.status === 'whatsapp_started' && !validStart)
+    || (raw.status !== 'whatsapp_started' && raw.whatsappStartedAt != null)) discard();
   return {
     reference: raw.reference.trim().slice(0, 80), createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : '',
     items, note: typeof raw.note === 'string' ? raw.note.slice(0, 1000) : '', contact,
-    selectedCity, otherCity, city, costs,
+    selectedCity, otherCity, city, costs, status,
+    whatsappStartedAt: status === 'whatsapp_started' ? raw.whatsappStartedAt : null,
   };
 }
 
@@ -105,6 +113,25 @@ function loadSession() {
       }
     } else if (saved.contact !== undefined) discard();
     if (saved.lastRequest !== undefined && saved.lastRequest !== null) data.lastRequest = sanitizeRequest(saved.lastRequest, discard);
+    if (Array.isArray(saved.history)) data.history = saved.history.map(request => sanitizeRequest(request, discard)).filter(Boolean);
+    else if (saved.history !== undefined) discard();
+    const uniqueHistory = new Map();
+    for (const request of data.history) {
+      const existing = uniqueHistory.get(request.reference);
+      uniqueHistory.set(request.reference, existing?.status === 'whatsapp_started' ? existing : request);
+    }
+    if (data.lastRequest) {
+      const historical = uniqueHistory.get(data.lastRequest.reference);
+      const canonical = historical?.status === 'whatsapp_started' ? historical : data.lastRequest;
+      uniqueHistory.set(canonical.reference, canonical);
+      data.lastRequest = canonical;
+    }
+    data.history = [...uniqueHistory.values()];
+    const matchesLast = data.lastRequest && JSON.stringify(data.items) === JSON.stringify(data.lastRequest.items)
+      && data.note === data.lastRequest.note && data.city === data.lastRequest.selectedCity
+      && data.otherCity === data.lastRequest.otherCity
+      && Object.keys(emptyContact).every(field => data.contact[field] === data.lastRequest.contact[field]);
+    data.draftDirty = typeof saved.draftDirty === 'boolean' ? saved.draftDirty : !matchesLast;
     return { data, warning: discarded ? 'Algunos datos guardados no eran válidos y se descartaron. Revisa tu lista antes de continuar.' : '' };
   } catch {
     return { data: defaults(), warning: 'No pudimos recuperar tu lista guardada. Puedes continuar; revisa que este navegador permita almacenamiento local.' };
@@ -121,10 +148,11 @@ export function AppProvider({ children }) {
   const [lastCatalog, setLastCatalog] = useState(route.startsWith('/catalogo') ? route : '/catalogo/laptops');
   const [helpReturn, setHelpReturn] = useState('/');
 
-  useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(session)); }
+  const persist = (next) => {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); }
     catch { setStorageWarning('Tu navegador no permite guardar la lista. Se conservará solo mientras esta página esté abierta.'); }
-  }, [session]);
+  };
+  useEffect(() => { persist(session); }, [session]);
   useEffect(() => {
     const handle = () => setRoute(window.location.hash.slice(1) || '/');
     window.addEventListener('hashchange', handle);
@@ -141,7 +169,23 @@ export function AppProvider({ children }) {
     return () => clearTimeout(timer);
   }, [toast]);
 
-  const update = (patch) => setSession(prev => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) }));
+  const update = (patch) => setSession(prev => {
+    const changes = typeof patch === 'function' ? patch(prev) : patch;
+    const editsDraft = ['items', 'note', 'contact', 'city', 'otherCity'].some(field => field in changes && changes[field] !== prev[field]);
+    return { ...prev, ...changes, ...(!('draftDirty' in changes) && editsDraft ? { draftDirty: true } : {}) };
+  });
+  const startWhatsApp = (reference) => {
+    const request = session.history.find(entry => entry.reference === reference)
+      || (session.lastRequest?.reference === reference ? session.lastRequest : null);
+    if (!request) return;
+    const started = { ...request, status: 'whatsapp_started', whatsappStartedAt: request.whatsappStartedAt || new Date().toISOString() };
+    const history = session.history.some(entry => entry.reference === reference)
+      ? session.history.map(entry => entry.reference === reference ? started : entry) : [...session.history, started];
+    const next = { ...session, history, lastRequest: started };
+    // Save before the anchor's default action hands off to WhatsApp.
+    persist(next);
+    setSession(next);
+  };
   const navigate = (path) => { setRoute(path); window.location.hash = path; };
   const notify = (message, kind = 'success', action = null) => setToast({ message, kind, action });
   const add = (product) => {
@@ -162,7 +206,7 @@ export function AppProvider({ children }) {
   const remove = (id) => update(prev => ({ items: prev.items.filter(item => item.id !== id) }));
 
   const destinationCity = session.city === 'Otra ciudad' ? (session.otherCity || '').trim() || 'Otra ciudad' : session.city;
-  return <AppContext.Provider value={{ session, destinationCity, update, route, navigate, toast, setToast, notify, add, compare, changeCity, help, helpReturn, changeQty, itemNote, remove, storageWarning, lastCatalog }}>{children}</AppContext.Provider>;
+  return <AppContext.Provider value={{ session, destinationCity, update, startWhatsApp, route, navigate, toast, setToast, notify, add, compare, changeCity, help, helpReturn, changeQty, itemNote, remove, storageWarning, lastCatalog }}>{children}</AppContext.Provider>;
 }
 
 export const useApp = () => useContext(AppContext);

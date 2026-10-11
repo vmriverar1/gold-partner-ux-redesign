@@ -43,7 +43,7 @@ export function Header() {
       <Link to="/" className="brand" aria-label="Gold Partner, ir al inicio"><img src={company.logo} alt="Gold Partner" width="230" height="71" /></Link>
       <form className="search-form" role="search" onSubmit={submitSearch}><Search size={19} aria-hidden="true" /><input type="search" aria-label="Buscar producto" placeholder="¿Qué tecnología estás buscando?" value={search} onChange={e => setSearch(e.target.value)} /><button type="submit" aria-label="Buscar"><ArrowRight size={20} /></button></form>
       <CitySelect />
-      <Link to="/solicitud/1" className="request-button" aria-label={`Mi solicitud ${count} unidades`}><FileText size={20} /><span>Mi solicitud</span><b aria-hidden="true">{count}</b></Link>
+      <Link to={session.lastRequest && !session.draftDirty ? '/solicitud/3' : '/solicitud/1'} className="request-button" aria-label={`Mi solicitud ${count} unidades`}><FileText size={20} /><span>Mi solicitud</span><b aria-hidden="true">{count}</b></Link>
     </div></header>
   </>;
 }
