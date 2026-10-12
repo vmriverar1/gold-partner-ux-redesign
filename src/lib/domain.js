@@ -43,7 +43,8 @@ export function calculateCosts(items, products, city) {
   // The catalogue price includes IGV. The two rows only explain that price.
   const baseCents = Math.round(productCents / 1.18);
   const taxCents = productCents - baseCents;
-  const shipping = units === 0 ? 0 : normalize(city) === 'lima' ? 25 : null;
+  // Shipping rates are simulated and charged once per request.
+  const shipping = units === 0 ? 0 : normalize(city) === 'lima' ? 25 : 35;
   return {
     base: baseCents / 100,
     tax: taxCents / 100,
@@ -55,9 +56,10 @@ export function calculateCosts(items, products, city) {
 }
 
 export function deliveryFor(city) {
-  return normalize(city) === 'lima'
-    ? { label: '2–4 días hábiles', detail: 'Plazo referencial. El asesor confirma la fecha y las condiciones de entrega.' }
-    : { label: 'Entrega por confirmar', detail: 'El asesor confirma el transporte, costo y plazo para tu ciudad.' };
+  return {
+    label: normalize(city) === 'lima' ? '2–4 días hábiles' : '4–7 días hábiles',
+    detail: 'Plazo simulado y referencial, contado desde la confirmación de la solicitud. El asesor confirma la fecha de entrega.',
+  };
 }
 
 export function validateContact(contact = {}) {
@@ -78,6 +80,7 @@ export function requestMessage(request, products) {
   const contact = request.contact ?? {};
   const city = request.city || contact.city || 'Por confirmar';
   const costs = request.costs ?? calculateCosts(request.items ?? [], products, city);
+  const delivery = deliveryFor(city);
   const lines = [
     'Hola, Gold Partner. Quiero solicitar una cotización.',
     `Referencia: ${request.reference ?? 'Sin referencia'}`,
@@ -99,6 +102,9 @@ export function requestMessage(request, products) {
     `IGV incluido (18%): ${money(costs.tax)}`,
     `Envío a ${city}: ${costs.shipping === null ? 'Por confirmar' : money(costs.shipping)}`,
     `${costs.shipping === null ? 'Subtotal conocido' : 'Total estimado'}: ${money(costs.total)}`,
+    'Tarifas de envío simuladas y referenciales.',
+    `Entrega estimada a ${city}: ${delivery.label}`,
+    delivery.detail,
     'Stock, importes y entrega sujetos a confirmación del asesor.',
     '',
     'MIS DATOS',

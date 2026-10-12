@@ -43,7 +43,10 @@ function sanitizeRequest(raw, discard) {
   }
   if (Object.keys(validateContact(contact)).length) { discard(); return null; }
   const costs = calculateCosts(items, products, city);
-  if (Object.keys(costs).some(field => costs[field] !== raw.costs[field])) discard();
+  // Earlier provincial drafts had no shipping estimate. This is a valid migration.
+  const previousCosts = raw.costs.shipping === null && costs.shipping === 35
+    ? { ...costs, shipping: null, total: costs.productsTotal } : costs;
+  if (Object.keys(previousCosts).some(field => previousCosts[field] !== raw.costs[field])) discard();
   const validStart = typeof raw.whatsappStartedAt === 'string'
     && Number.isFinite(Date.parse(raw.whatsappStartedAt))
     && new Date(raw.whatsappStartedAt).toISOString() === raw.whatsappStartedAt;

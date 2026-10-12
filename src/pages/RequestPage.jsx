@@ -20,7 +20,7 @@ function RequestItems({ request, editable = false }) {
 }
 
 function DeliverySummary({ city, editable = false }) {
-  return <div className="request-delivery-summary"><span>Entrega a {city}</span><b>{deliveryFor(city).label}</b>{editable && <CitySelect id="request-city" compact />}</div>;
+  return <div className="request-delivery-summary"><span>Entrega a {city}</span><b>{deliveryFor(city).label}, desde la confirmación de la solicitud.</b>{editable && <CitySelect id="request-city" compact />}</div>;
 }
 
 function RequestHistory({ requests, onView, onRepeat, onDelete }) {
